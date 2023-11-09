@@ -22,8 +22,8 @@ def _make_llm(model, temp, verbose, api_key, max_tokens=1000, n_ctx=2048):
                 callbacks=[StreamingStdOutCallbackHandler()] if verbose else [None],
                 openai_api_key = api_key
             )
-        except:
-            return "Invalid openai key"
+        except Exception as e:
+            print("Invalid openai key: {}".format(e))
     elif model.startswith("text-"):
         try:
             llm = langchain.OpenAI(
@@ -34,7 +34,7 @@ def _make_llm(model, temp, verbose, api_key, max_tokens=1000, n_ctx=2048):
                 openai_api_key = api_key
             )
         except:
-            return "Invalid openai key"
+            print("Invalid openai key: {}".format(e))
     elif os.path.exists(model):
         ext = os.path.splitext(model)[-1].lower()
         if ext == ".bin":

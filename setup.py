@@ -20,7 +20,9 @@ setup(
         "ipython",
         "rdkit",
         "synspace",
-        "openai==0.27.8",
+        "openai==0.28.1",
+        "gpt4all==0.3.0",
+        "llama-cpp-python==0.2.13",
         "molbloom",
         "paper-qa==1.1.1",
         "google-search-results",
@@ -32,7 +34,8 @@ setup(
         "streamlit",
         "rxn4chemistry",
         "duckduckgo-search",
-        "wikipedia"
+        "wikipedia",
+        "paperscraper"
     ],
     test_suite="tests",
     long_description=long_description,

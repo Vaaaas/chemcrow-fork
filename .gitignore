@@ -135,3 +135,6 @@ query/
 
 *.bin
 *.gguf
+
+.vscode
+ckpt
