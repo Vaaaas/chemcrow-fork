@@ -36,6 +36,18 @@ All the experiments have been released under [ChemCrow runs](https://github.com/
 pip install chemcrow
 ```
 
+or for development:
+
+```
+conda create -n chemcrow python=3.9
+
+conda activate chemcrow
+
+pip install -e .
+
+pip install -r dev-requirements.txt
+```
+
 ## 🔥 Usage
 First set up your API keys in your environment.
 ```
