@@ -23,8 +23,9 @@ from dotenv import load_dotenv
 load_dotenv()
 ss = st.session_state
 
-#tools = ChemTools().all_tools
+local = True
 
+#tools = ChemTools().all_tools
 
 # agent = ChemCrow(
 #     #tools,
@@ -32,9 +33,16 @@ ss = st.session_state
 #     temp=0.1,
 # ).agent_executor
 
-agent = ChemCrow(model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
-                tools_model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
-                temp=0.1, verbose=True, max_tokens=100, n_ctx=2048).agent_executor
+if local:
+    agent = ChemCrow(model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
+                    tools_model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
+                    temp=0.1, verbose=True, max_tokens=512, n_ctx=2048).agent_executor
+else:
+    agent = ChemCrow(
+                #tools,
+                model='gpt-4',
+                temp=0.1,
+            ).agent_executor
 
 #tool_list = pd.Series(
 #    {f"✅ {t.name}":t.description for t in tools}
@@ -85,7 +93,6 @@ with st.sidebar:
     #    height=300
 
     #)
-
 
 print(st.session_state)
 # Agent execution

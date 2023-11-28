@@ -45,6 +45,8 @@ conda activate chemcrow
 
 pip install -e .
 
+CUDACXX=/usr/local/cuda-12.1/bin/nvcc CMAKE_ARGS="-DLLAMA_CUBLAS=on -DCMAKE_CUDA_ARCHITECTURES=native" FORCE_CMAKE=1 proxychains pip install llama-cpp-python --no-cache-dir --force-reinstall --upgrade
+
 pip install -r dev-requirements.txt
 ```
 

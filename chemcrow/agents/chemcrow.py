@@ -49,6 +49,7 @@ def _make_llm(model, temp, verbose, api_key, max_tokens=1000, n_ctx=2048):
                 n_ctx=n_ctx,
                 top_p=1,
                 verbose=True, # Verbose is required to pass to the callback manager
+                # n_gpu_layers=12
             )
         else:
             raise ValueError(f"Found file: {model}, but this function is only able to load .bin and .gguf models.")    
