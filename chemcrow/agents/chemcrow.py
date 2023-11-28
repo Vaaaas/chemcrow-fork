@@ -1,11 +1,12 @@
-import langchain, os
-import nest_asyncio
+import os
+import langchain
+from pydantic import ValidationError
 from langchain import PromptTemplate, chains
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from rmrkl import ChatZeroShotAgent, RetryAgentExecutor
 
-
 from langchain.llms import LlamaCpp, GPT4All
+from typing import Optional
 
 from .prompts import FORMAT_INSTRUCTIONS, QUESTION_PROMPT, REPHRASE_TEMPLATE, SUFFIX
 from .tools import make_tools
@@ -57,8 +58,6 @@ def _make_llm(model, temp, verbose, api_key, max_tokens=1000, n_ctx=2048):
         raise ValueError(f"Invalid model name: {model}")
     return llm
 
-
-
 class ChemCrow:
     def __init__(
         self,
@@ -68,24 +67,27 @@ class ChemCrow:
         temp=0.1,
         max_iterations=40,
         verbose=True,
-        openai_api_key: str = None,
-        api_keys: dict = None,
+        openai_api_key: Optional[str] = None,
+        api_keys: dict = {},
         max_tokens: int = 1000, # Not required for using OpenAI's API
         n_ctx: int =  2048
     ):
+        try:
+            self.llm = _make_llm(model, temp, verbose, openai_api_key, max_tokens, n_ctx)
+            if isinstance(self.llm, str):
+                return self.llm
+        except ValidationError:
+            raise ValueError('Invalid OpenAI API key')
 
-        self.llm = _make_llm(model, temp, verbose, openai_api_key, max_tokens, n_ctx)
-        
-        if isinstance(self.llm, str):
-            return self.llm
-        
         if tools is None:
+            api_keys['OPENAI_API_KEY'] = openai_api_key
             tools_llm = _make_llm(tools_model, temp, verbose, openai_api_key, max_tokens, n_ctx)
             tools = make_tools(
                 tools_llm,
                 api_keys = api_keys,
                 verbose=verbose
             )
+
         # Initialize agent
         self.agent_executor = RetryAgentExecutor.from_agent_and_tools(
             tools=tools,
@@ -98,7 +100,6 @@ class ChemCrow:
             ),
             verbose=True,
             max_iterations=max_iterations,
-            #return_intermediate_steps=True,
         )
 
         rephrase = PromptTemplate(
@@ -107,19 +108,6 @@ class ChemCrow:
 
         self.rephrase_chain = chains.LLMChain(prompt=rephrase, llm=self.llm)
 
-    #nest_asyncio.apply()  # Fix "this event loop is already running" error
-
     def run(self, prompt):
         outputs = self.agent_executor({"input": prompt})
         return outputs['output']
-        # Parse long output (with intermediate steps)
-        #intermed = outputs["intermediate_steps"]
-
-        #final = ""
-        #for step in intermed:
-        #    final += f"Thought: {step[0].log}\n" f"Observation: {step[1]}\n"
-        #final += f"Final Answer: {outputs['output']}"
-
-        #rephrased = self.rephrase_chain.run(question=prompt, agent_ans=final)
-        #print(f"ChemCrow output: {rephrased}")
-        #return rephrased

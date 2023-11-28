@@ -1,28 +1,19 @@
 from langchain.callbacks.streamlit.streamlit_callback_handler import (
-    LLMThoughtLabeler,
     StreamlitCallbackHandler,
     LLMThought,
     LLMThoughtState,
-    ToolRecord
+    LLMThoughtLabeler,
+    ToolRecord,
+    CHECKMARK_EMOJI,
+    THINKING_EMOJI,
+    EXCEPTION_EMOJI
 )
-import streamlit as st
-
-from rmrkl import ChatZeroShotAgent, RetryAgentExecutor
-from IPython.core.display import HTML
-import requests
-from chemcrow.agents.prompts import FORMAT_INSTRUCTIONS, SUFFIX, QUESTION_PROMPT
-
-from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Union
-
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.callbacks.streamlit.mutable_expander import MutableExpander
-from langchain.schema import AgentAction, AgentFinish, LLMResult
-
+from langchain_core.schema import AgentAction, AgentFinish, LLMResult
+from typing import Any, Dict, List, Optional
 from streamlit.delta_generator import DeltaGenerator
+from chemcrow.utils import is_smiles
 
-import ast
-from .utils import cdk, tool_parse_chain, is_valid_smiles
+from .utils import cdk
 
 
 class LLMThoughtChem(LLMThought):
@@ -40,7 +31,6 @@ class LLMThoughtChem(LLMThought):
             collapse_on_complete,
         )
 
-
     def on_tool_end(
         self,
         output: str,
@@ -48,69 +38,71 @@ class LLMThoughtChem(LLMThought):
         observation_prefix: Optional[str] = None,
         llm_prefix: Optional[str] = None,
         output_ph: dict = {},
-        input_tool: str = None,
-        serialized: dict = None,
+        input_tool: str = "",
+        serialized: dict = {},
         **kwargs: Any,
     ) -> None:
 
         # Depending on the tool name, decide what to display.
-
         if serialized['name'] == 'Name2SMILES':
-            self._container.markdown(
-                f"**{output}**{cdk(output)}",
-                unsafe_allow_html=True
-            )
+            safe_smiles = output.replace("[", "\[").replace("]", "\]")
+            if is_smiles(output):
+                self._container.markdown(
+                    f"**{safe_smiles}**{cdk(output)}",
+                    unsafe_allow_html=True
+                )
 
-        if serialized['name'] == 'RXNPredict':
+        if serialized['name'] == 'ReactionPredict':
             rxn = f"{input_tool}>>{output}"
+            safe_smiles = rxn.replace("[", "\[").replace("]", "\]")
             self._container.markdown(
-                f"**{output}**{cdk(rxn)}",
+                f"**{safe_smiles}**{cdk(rxn)}",
                 unsafe_allow_html=True
             )
 
-        return 0
+        if serialized['name'] == 'ReactionPlanner':
+            # TODO
+            pass
 
-        parse_result_inp = ast.literal_eval(
-            tool_parse_chain.run(
-                input_tool = input_tool,
+    def on_tool_start(
+        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
+    ) -> None:
+        # Called with the name of the tool we're about to run (in `serialized[name]`),
+        # and its input. We change our container's label to be the tool name.
+        self._state = LLMThoughtState.RUNNING_TOOL
+        tool_name = serialized["name"]
+        self._last_tool = ToolRecord(name=tool_name, input_str=input_str)
+        self._container.update(
+            new_label=(
+                self._labeler.get_tool_label(
+                    self._last_tool, is_complete=False
+                ).replace("[", "\[").replace("]", "\]")
             )
         )
-        parse_result_out = ast.literal_eval(
-            tool_parse_chain.run(
-                input_tool = output,
-            )
-        )
 
-        smiles1, smiles2 = "", ""
-
-        if parse_result_inp['status'] == 'OK':
-            if is_valid_smiles(parse_result_inp['result']):
-                smiles1 = parse_result_inp['result']
-
-        if parse_result_out['status'] == 'OK':
-            if is_valid_smiles(parse_result_out['result']):
-                smiles2 = parse_result_out['result']
-
-        print(parse_result_inp, parse_result_out)
-
-        disp_smiles=""
-        if smiles1 and smiles2 and serialized['name'] == 'RXNPredict':
-            disp_smiles = f"{smiles1}>>{smiles2}"
-        elif smiles2:
-            disp_smiles = f"{smiles2}"
-        elif smiles1:
-            disp_smiles = f"{smiles1}"
-
-        if disp_smiles:
+        # Display note of potential long time
+        if serialized['name'] == 'ReactionPlanner':
             self._container.markdown(
-                f"**{output}**{cdk(disp_smiles)}",
+                f"‼️ Note: This tool can take up to 5 minutes to complete execution ‼️",
                 unsafe_allow_html=True
             )
 
+    def complete(self, final_label: Optional[str] = None) -> None:
+        """Finish the thought."""
+        if final_label is None and self._state == LLMThoughtState.RUNNING_TOOL:
+            assert (
+                self._last_tool is not None
+            ), "_last_tool should never be null when _state == RUNNING_TOOL"
+            final_label = self._labeler.get_tool_label(
+                self._last_tool, is_complete=True
+            )
+        self._state = LLMThoughtState.COMPLETE
+
+        final_label = final_label.replace("[", "\[").replace("]", "\]")
+        if self._collapse_on_complete:
+            self._container.update(new_label=final_label, new_expanded=False)
         else:
-            self._container.markdown(
-                f"**{output}**"
-            )
+            self._container.update(new_label=final_label)
 
 
 class StreamlitCallbackHandlerChem(StreamlitCallbackHandler):
@@ -179,3 +171,12 @@ class StreamlitCallbackHandlerChem(StreamlitCallbackHandler):
             **kwargs
         )
         self._complete_current_thought()
+
+    def on_agent_finish(
+        self, finish: AgentFinish, color: Optional[str] = None, **kwargs: Any
+    ) -> None:
+        if self._current_thought is not None:
+            self._current_thought.complete(
+                self._thought_labeler.get_final_agent_thought_label().replace("[", "\[").replace("]", "\]")
+            )
+            self._current_thought = None
