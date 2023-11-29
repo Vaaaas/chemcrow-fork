@@ -22,7 +22,7 @@ setup(
         "synspace",
         "openai==0.28.1",
         "gpt4all==0.3.0",
-        "llama-cpp-python==0.2.13",
+        # "llama-cpp-python==0.2.13",
         "molbloom",
         "paper-qa==1.1.1",
         "google-search-results",

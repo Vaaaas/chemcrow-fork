@@ -27,12 +27,6 @@ local = True
 
 #tools = ChemTools().all_tools
 
-# agent = ChemCrow(
-#     #tools,
-#     model='gpt-4',
-#     temp=0.1,
-# ).agent_executor
-
 if local:
     agent = ChemCrow(model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
                     tools_model="ckpt/llama-2-7b-chat.Q8_0.gguf", 
@@ -73,7 +67,6 @@ st.markdown(
 def on_api_key_change():
     api_key = ss.get('api_key') or os.getenv('OPENAI_API_KEY')
     os.environ["OPENAI_API_KEY"] = api_key
-
 
 # sidebar
 with st.sidebar:
