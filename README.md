@@ -25,8 +25,8 @@ Built with Langchain, it uses a collection of chemical tools including RDKit, pa
 
 ## ⚠️ Note
 
-This package does not contain all the tools described in the [ChemCrow paper](https://arxiv.org/abs/2304.05376) because 
-of API usage restrictions. This repo will not give the same results as that paper. 
+This package does not contain all the tools described in the [ChemCrow paper](https://arxiv.org/abs/2304.05376) because
+of API usage restrictions. This repo will not give the same results as that paper.
 
 All the experiments have been released under [ChemCrow runs](https://github.com/ur-whitelab/chemcrow-runs).
 
@@ -67,7 +67,7 @@ In a Python session:
 ```python
 from chemcrow.agents import ChemCrow
 
-chem_model = ChemCrow(model="gpt-4-0613", temp=0.1, verbose=True)
+chem_model = ChemCrow(model="gpt-4-0613", temp=0.1, streaming=False)
 chem_model.run("What is the molecular weight of tylenol?")
 ```
 
@@ -93,7 +93,7 @@ Bran, Andres M., et al. "ChemCrow: Augmenting large-language models with chemist
 
 ```bibtex
 @article{bran2023chemcrow,
-      title={ChemCrow: Augmenting large-language models with chemistry tools}, 
+      title={ChemCrow: Augmenting large-language models with chemistry tools},
       author={Andres M Bran and Sam Cox and Oliver Schilter and Carlo Baldassari and Andrew D White and Philippe Schwaller},
       year={2023},
       eprint={2304.05376},
