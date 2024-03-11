@@ -2,6 +2,8 @@ from langchain.tools import BaseTool
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem, rdMolDescriptors
 
+from chemcrow.utils import *
+
 
 class MolSimilarity(BaseTool):
     name = "MolSimilarity"
@@ -10,7 +12,7 @@ class MolSimilarity(BaseTool):
     )
 
     def __init__(self):
-        super(MolSimilarity, self).__init__()
+        super().__init__()
 
     def _run(self, smiles_pair: str) -> str:
         smi_list = smiles_pair.split(".")
@@ -19,31 +21,27 @@ class MolSimilarity(BaseTool):
         else:
             smiles1, smiles2 = smi_list
 
-        try:
-            mol1 = Chem.MolFromSmiles(smiles1)
-            mol2 = Chem.MolFromSmiles(smiles2)
-            fp1 = AllChem.GetMorganFingerprintAsBitVect(mol1, 2, nBits=2048)
-            fp2 = AllChem.GetMorganFingerprintAsBitVect(mol2, 2, nBits=2048)
-            similarity = DataStructs.TanimotoSimilarity(fp1, fp2)
+        similarity = tanimoto(smiles1, smiles2)
 
-            sim_score = {
-                0.9: "very similar",
-                0.8: "similar",
-                0.7: "somewhat similar",
-                0.6: "not very similar",
-                0: "not similar",
-            }
-            if similarity == 1:
-                return "Error: Input Molecules Are Identical"
-            else:
-                val = sim_score[
-                    max(key for key in sim_score.keys() if key <= round(similarity, 1))
-                ]
-                message = f"The Tanimoto similarity between {smiles1} and {smiles2} is {round(similarity, 4)},\
-                indicating that the two molecules are {val}."
-            return message
-        except (TypeError, ValueError, AttributeError):
-            return "Error: Not a valid SMILES string"
+        if isinstance(similarity, str):
+            return similarity
+
+        sim_score = {
+            0.9: "very similar",
+            0.8: "similar",
+            0.7: "somewhat similar",
+            0.6: "not very similar",
+            0: "not similar",
+        }
+        if similarity == 1:
+            return "Error: Input Molecules Are Identical"
+        else:
+            val = sim_score[
+                max(key for key in sim_score.keys() if key <= round(similarity, 1))
+            ]
+            message = f"The Tanimoto similarity between {smiles1} and {smiles2} is {round(similarity, 4)},\
+            indicating that the two molecules are {val}."
+        return message
 
     async def _arun(self, smiles_pair: str) -> str:
         """Use the tool asynchronously."""
@@ -57,7 +55,7 @@ class SMILES2Weight(BaseTool):
     def __init__(
         self,
     ):
-        super(SMILES2Weight, self).__init__()
+        super().__init__()
 
     def _run(self, smiles: str) -> str:
         mol = Chem.MolFromSmiles(smiles)
@@ -79,7 +77,7 @@ class FuncGroups(BaseTool):
     def __init__(
         self,
     ):
-        super(FuncGroups, self).__init__()
+        super().__init__()
 
         # List obtained from https://github.com/rdkit/rdkit/blob/master/Data/FunctionalGroups.txt
         self.dict_fgs = {
